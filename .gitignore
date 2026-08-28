@@ -1,0 +1,10 @@
+# Python
+__pycache__/
+*.pyc
+
+# Secrets (real values live only in these local files; *.example files are committed)
+backend/.env
+frontend/.env.local
+
+# OS
+.DS_Store

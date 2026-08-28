@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f5f7;
+  --background-2: #eceef2;
+  --foreground: #1d1d1f;
+  --muted: #6e6e73;
+  --accent: #0071e3;
+  --accent-contrast: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.72);
+  --card-border: rgba(0, 0, 0, 0.06);
+  --track: rgba(0, 0, 0, 0.08);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 12px 28px -12px rgba(0, 0, 0, 0.14);
+  --radius-card: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000000;
+    --background-2: #0a0a0c;
+    --foreground: #f5f5f7;
+    --muted: #98989d;
+    --accent: #0a84ff;
+    --accent-contrast: #ffffff;
+    --card-bg: rgba(28, 28, 30, 0.6);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --track: rgba(255, 255, 255, 0.12);
+    --hairline: rgba(255, 255, 255, 0.1);
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 20px 40px -16px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  min-height: 100dvh;
+  background:
+    radial-gradient(1200px 600px at 15% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--background) 0%, var(--background-2) 100%);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass-card {
+  background: var(--card-bg);
+  border: 0.5px solid var(--card-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.choice-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  font-size: 15px;
+  line-height: 1.4;
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.choice-row:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.choice-row:active {
+  transform: scale(0.99);
+}
+
+.choice-row-selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.choice-letter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.choice-row-selected .choice-letter {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.choice-image-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  text-align: left;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.choice-image-card:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.choice-image-card:active {
+  transform: scale(0.99);
+}
+
+.choice-image-card-selected {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.choice-image-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.choice-image-card-selected .choice-image-label {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.choice-image-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 130px;
+  border-radius: 10px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.choice-image-img {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+@media (min-width: 640px) {
+  .choice-image-frame {
+    height: 160px;
+  }
+}
+
+.btn-primary {
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.btn-primary:disabled {
+  opacity: 0.35;
+}
+.btn-primary:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.btn-ghost {
+  padding: 0.7rem 1.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+  border: 0.5px solid var(--hairline);
+  color: var(--foreground);
+  font-size: 14px;
+  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.1s ease, background-color 0.15s ease;
+}
+.btn-ghost:disabled {
+  opacity: 0.35;
+}
+.btn-ghost:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+.btn-ghost:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.chip {
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--foreground) 4%, transparent);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--foreground);
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.chip:hover {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+.chip-selected,
+.chip-selected:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+.input-field {
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  border: 0.5px solid var(--hairline);
+  background: color-mix(in srgb, var(--foreground) 3%, transparent);
+  font-size: 15px;
+  color: var(--foreground);
+}
+.input-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.badge-correct {
+  background: rgba(52, 199, 89, 0.18);
+}
+.badge-incorrect {
+  background: rgba(255, 59, 48, 0.16);
+}
+.text-correct {
+  color: #1f8a3c;
+}
+.text-incorrect {
+  color: #d7263d;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-card-in {
+  animation: card-in 0.25s ease-out;
+}

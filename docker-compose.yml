@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: quiz_dr_db
+    environment:
+      POSTGRES_USER: quizdr
+      POSTGRES_PASSWORD: quizdr
+      POSTGRES_DB: quizdr
+    ports:
+      - "5433:5432"
+    volumes:
+      - quiz_dr_pgdata:/var/lib/postgresql/data
+
+volumes:
+  quiz_dr_pgdata:
