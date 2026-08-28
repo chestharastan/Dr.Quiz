@@ -104,22 +104,6 @@ class UserUpdateIn(BaseModel):
     role: Literal["admin", "user"] | None = None
 
 
-class ImageQuestionOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: uuid.UUID
-    image_path: str
-
-
-class ImageAnswerIn(BaseModel):
-    question_id: uuid.UUID
-    selected_answer: Literal["A", "B", "C", "D"]
-
-
-class ImageSubmitIn(BaseModel):
-    answers: list[ImageAnswerIn]
-
-
 class QaChoiceOut(BaseModel):
     """A single choice's image, labeled with its ORIGINAL source letter (not its display position)."""
 

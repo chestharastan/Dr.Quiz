@@ -64,24 +64,6 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-class ImageQuestion(Base):
-    """A quiz question that is a single cropped image (question + choices baked in); user answers by letter."""
-
-    __tablename__ = "image_questions"
-    __table_args__ = (
-        UniqueConstraint("source_file", "question_number", name="uq_image_source_file_question_number"),
-        CheckConstraint("correct_answer IN ('A','B','C','D')", name="ck_image_correct_answer_letter"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_file: Mapped[str] = mapped_column(String, nullable=False)
-    question_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    image_path: Mapped[str] = mapped_column(String, nullable=False)
-    correct_answer: Mapped[str] = mapped_column(String(1), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
 class QaQuestion(Base):
     """A quiz question with a separate cropped image per choice (no letters baked into any image)."""
 

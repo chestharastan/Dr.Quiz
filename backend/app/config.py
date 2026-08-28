@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     initial_admin_username: str = "admin"
     initial_admin_password: str | None = None
-    question_images_dir: str = "/home/thareah/Extract/output_images/images"
     qa_images_dir: str = "/home/thareah/Quiz_Dr/output_qa"
 
     @property

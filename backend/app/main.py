@@ -19,11 +19,6 @@ app.include_router(auth.router)
 app.include_router(quiz.router)
 app.include_router(admin.router)
 app.mount(
-    "/static/question_images",
-    StaticFiles(directory=settings.question_images_dir),
-    name="question_images",
-)
-app.mount(
     "/static/qa_images",
     StaticFiles(directory=settings.qa_images_dir),
     name="qa_images",
