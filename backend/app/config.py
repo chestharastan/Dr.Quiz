@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     initial_admin_username: str = "admin"
     initial_admin_password: str | None = None
     question_images_dir: str = "/home/thareah/Extract/output_images/images"
-    qa_images_dir: str = "/home/thareah/Extract/output_qa"
+    qa_images_dir: str = "/home/thareah/Quiz_Dr/output_qa"
 
     @property
     def cors_origin_list(self) -> list[str]:

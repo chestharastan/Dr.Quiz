@@ -76,6 +76,8 @@ def submit_quiz(body: SubmitIn, user: User = Depends(get_current_user), db: Sess
 def _qa_out(q: QaQuestion) -> QaQuestionOut:
     return QaQuestionOut(
         id=q.id,
+        source_file=q.source_file,
+        question_number=q.question_number,
         question_image=q.question_image,
         choices=[
             QaChoiceOut(label="A", image=q.choice_a_image),

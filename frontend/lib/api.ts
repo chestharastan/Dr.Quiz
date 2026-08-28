@@ -43,9 +43,16 @@ export type QaChoice = {
 
 export type QaQuizQuestion = {
   id: string;
+  source_file: string;
+  question_number: number;
   question_image: string;
   choices: QaChoice[];
 };
+
+export function qaQuestionLabel(q: QaQuizQuestion) {
+  const title = q.source_file.replace(/\.md$/i, "");
+  return `${title} · Q${String(q.question_number).padStart(4, "0")}`;
+}
 
 export function qaImageUrl(imagePath: string) {
   const encoded = imagePath.split("/").map(encodeURIComponent).join("/");

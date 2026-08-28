@@ -129,6 +129,8 @@ class QaChoiceOut(BaseModel):
 
 class QaQuestionOut(BaseModel):
     id: uuid.UUID
+    source_file: str
+    question_number: int
     question_image: str
     choices: list[QaChoiceOut]
 

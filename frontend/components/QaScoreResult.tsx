@@ -1,4 +1,4 @@
-import { qaImageUrl, type QaQuizQuestion, type SubmitResult } from "@/lib/api";
+import { qaImageUrl, qaQuestionLabel, type QaQuizQuestion, type SubmitResult } from "@/lib/api";
 
 export default function QaScoreResult({
   result,
@@ -44,18 +44,23 @@ export default function QaScoreResult({
                 alt={`Question ${idx + 1}`}
                 className="h-16 w-16 shrink-0 rounded-lg border border-[var(--hairline)] bg-white object-contain"
               />
-              <p className="text-[13px] text-[var(--muted)]">
-                Your answer:{" "}
-                <strong className={r.is_correct ? "text-correct" : "text-incorrect"}>
-                  {r.selected_answer}
-                </strong>
-                {!r.is_correct && (
-                  <>
-                    {" "}
-                    · Correct: <strong className="text-correct">{r.correct_answer}</strong>
-                  </>
-                )}
-              </p>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[12px] font-medium text-[var(--muted)]">
+                  {qaQuestionLabel(q)}
+                </span>
+                <p className="text-[13px] text-[var(--muted)]">
+                  Your answer:{" "}
+                  <strong className={r.is_correct ? "text-correct" : "text-incorrect"}>
+                    {r.selected_answer}
+                  </strong>
+                  {!r.is_correct && (
+                    <>
+                      {" "}
+                      · Correct: <strong className="text-correct">{r.correct_answer}</strong>
+                    </>
+                  )}
+                </p>
+              </div>
             </li>
           );
         })}
