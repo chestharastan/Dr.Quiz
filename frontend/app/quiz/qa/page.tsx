@@ -28,10 +28,10 @@ type PersistedSession = {
 };
 
 function storageKey(userId: string) {
-  return `quizdr:qa-session:v1:${userId}`;
+  return `quizdr:image-session:v2:${userId}`;
 }
 
-export default function QaQuizPage() {
+export default function ImageQuizPage() {
   const router = useRouter();
   const [user, setUser] = useState<AuthUser | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
@@ -105,7 +105,7 @@ export default function QaQuizPage() {
       setCurrentIndex(0);
       setResult(null);
       setStage(qs.length === 0 ? "error" : "quiz");
-      if (qs.length === 0) setError("No active QA questions available.");
+      if (qs.length === 0) setError("No active image questions available.");
     } catch (e) {
       setError(String(e));
       setStage("error");
@@ -160,7 +160,7 @@ export default function QaQuizPage() {
           <Link href="/quiz" className="text-[13px] font-medium text-[var(--muted)] hover:text-[var(--foreground)]">
             ← Quiz
           </Link>
-          <h1 className="text-[20px] font-semibold tracking-[-0.02em]">QA Image Quiz</h1>
+          <h1 className="text-[20px] font-semibold tracking-[-0.02em]">Image Quiz</h1>
         </div>
         {stage === "quiz" && (
           <button

@@ -41,7 +41,7 @@ export default function QaImageQuizForm({
 
   // Choices arrive in their original source order (A-D); reshuffle per question
   // so the correct answer isn't always in the same on-screen position.
-  const displayChoices = useMemo(() => shuffled(question.choices), [question.id]);
+  const displayChoices = useMemo(() => shuffled(question.choices), [question.choices]);
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -75,7 +75,7 @@ export default function QaImageQuizForm({
         />
       </div>
 
-      <div key={question.id} className="glass-card animate-card-in p-4 sm:p-5">
+      <div key={question.id} className="glass-card animate-card-in p-3 sm:p-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={qaImageUrl(question.question_image)}
@@ -83,7 +83,7 @@ export default function QaImageQuizForm({
           className="w-full rounded-xl border border-[var(--hairline)]"
         />
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-3 qa-table">
           {displayChoices.map((choice, i) => {
             const displayLabel = DISPLAY_LABELS[i];
             const isSelected = selected === choice.label;
@@ -92,17 +92,17 @@ export default function QaImageQuizForm({
                 key={choice.label}
                 type="button"
                 onClick={() => handleChoice(choice.label)}
-                className={`choice-image-card ${isSelected ? "choice-image-card-selected" : ""}`}
+                className={`qa-table-row ${isSelected ? "qa-table-row-selected" : ""}`}
               >
-                <span className="choice-image-label">{displayLabel}.</span>
-                <div className="choice-image-frame">
+                <span className="qa-table-letter">{displayLabel}</span>
+                <span className="qa-table-image-frame">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qaImageUrl(choice.image)}
                     alt={`Choice ${displayLabel}`}
-                    className="choice-image-img"
+                    className="qa-table-image"
                   />
-                </div>
+                </span>
               </button>
             );
           })}

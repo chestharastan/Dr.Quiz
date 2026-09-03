@@ -6,15 +6,18 @@ import Link from "next/link";
 import {
   fetchAvailableTasks,
   fetchMe,
+  fetchQuizHistory,
   fetchQuizQuestions,
   submitQuiz,
   type AuthUser,
   type QuizQuestion,
+  type QuizAttempt,
   type SubmitResult,
   type Task,
 } from "@/lib/api";
 import QuizForm from "@/components/QuizForm";
 import ScoreResult from "@/components/ScoreResult";
+import QuizHistory from "@/components/QuizHistory";
 
 type Stage = "loading" | "pick-task" | "quiz" | "result" | "error";
 
@@ -37,6 +40,7 @@ export default function TextQuizPage() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [history, setHistory] = useState<QuizAttempt[]>([]);
   const [taskId, setTaskId] = useState<string>("");
   const [taskName, setTaskName] = useState<string>("");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -80,9 +84,10 @@ export default function TextQuizPage() {
 
       if (!resumed) {
         try {
-          const list = await fetchAvailableTasks();
+          const [list, attempts] = await Promise.all([fetchAvailableTasks(), fetchQuizHistory()]);
           if (cancelled) return;
           setTasks(list);
+          setHistory(attempts);
           setStage("pick-task");
         } catch (e) {
           setError(String(e));
@@ -147,7 +152,9 @@ export default function TextQuizPage() {
     setResult(null);
     setStage("loading");
     try {
-      setTasks(await fetchAvailableTasks());
+      const [list, attempts] = await Promise.all([fetchAvailableTasks(), fetchQuizHistory()]);
+      setTasks(list);
+      setHistory(attempts);
       setStage("pick-task");
     } catch (e) {
       setError(String(e));
@@ -167,7 +174,7 @@ export default function TextQuizPage() {
       const payload = questions
         .map((q) => ({ question_id: q.id, selected_answer: answers[q.id] }))
         .filter((a) => a.selected_answer);
-      const res = await submitQuiz(payload);
+      const res = await submitQuiz(taskId, payload);
       setResult(res);
       setStage("result");
     } catch (e) {
@@ -218,6 +225,7 @@ export default function TextQuizPage() {
               </span>
             </button>
           ))}
+          <QuizHistory attempts={history} />
         </div>
       )}
 

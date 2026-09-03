@@ -1,4 +1,13 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const CONFIGURED_API_BASE_URL = (
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
+).replace(/\/$/, "");
+
+function apiBaseUrl() {
+  // Browser requests always go through the Next.js origin. This keeps auth
+  // cookies, API calls, and images on one host and works identically from the
+  // development computer and phones on the local network.
+  return typeof window === "undefined" ? CONFIGURED_API_BASE_URL : "";
+}
 
 export type Role = "admin" | "user";
 
@@ -26,16 +35,6 @@ export type QuizQuestion = {
   choice_d: string;
 };
 
-export type ImageQuizQuestion = {
-  id: string;
-  image_path: string;
-};
-
-export function imageUrl(imagePath: string) {
-  const encoded = imagePath.split("/").map(encodeURIComponent).join("/");
-  return `${API_BASE_URL}/static/question_images/${encoded}`;
-}
-
 export type QaChoice = {
   label: "A" | "B" | "C" | "D";
   image: string;
@@ -56,7 +55,7 @@ export function qaQuestionLabel(q: QaQuizQuestion) {
 
 export function qaImageUrl(imagePath: string) {
   const encoded = imagePath.split("/").map(encodeURIComponent).join("/");
-  return `${API_BASE_URL}/static/qa_images/${encoded}`;
+  return `${apiBaseUrl()}/static/qa_images/${encoded}`;
 }
 
 export type AdminQuestion = QuizQuestion & {
@@ -72,6 +71,8 @@ export type AdminQuestion = QuizQuestion & {
 export type SubmitResult = {
   score: number;
   total: number;
+  attempt_id?: string | null;
+  submitted_at?: string | null;
   per_question_results: {
     question_id: string;
     selected_answer: string;
@@ -80,8 +81,20 @@ export type SubmitResult = {
   }[];
 };
 
+export type QuizAttempt = {
+  id: string;
+  task_id: string;
+  task_name: string;
+  score: number;
+  total: number;
+  submitted_at: string;
+  per_question_results: (SubmitResult["per_question_results"][number] & {
+    question_text: string;
+  })[];
+};
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
     ...options,
     credentials: "include",
     headers: { "Content-Type": "application/json", ...options.headers },
@@ -116,22 +129,15 @@ export function fetchQuizQuestions(taskId: string) {
   return request<QuizQuestion[]>(`/api/quiz/questions?task_id=${taskId}`);
 }
 
-export function submitQuiz(answers: { question_id: string; selected_answer: string }[]) {
+export function submitQuiz(taskId: string, answers: { question_id: string; selected_answer: string }[]) {
   return request<SubmitResult>(`/api/quiz/submit`, {
     method: "POST",
-    body: JSON.stringify({ answers }),
+    body: JSON.stringify({ task_id: taskId, answers }),
   });
 }
 
-export function fetchImageQuestions(count: number) {
-  return request<ImageQuizQuestion[]>(`/api/quiz/image-questions?count=${count}`);
-}
-
-export function submitImageQuiz(answers: { question_id: string; selected_answer: string }[]) {
-  return request<SubmitResult>(`/api/quiz/image-submit`, {
-    method: "POST",
-    body: JSON.stringify({ answers }),
-  });
+export function fetchQuizHistory() {
+  return request<QuizAttempt[]>("/api/quiz/history");
 }
 
 export function fetchQaQuestions(count: number) {
@@ -169,7 +175,7 @@ export function deleteAdminQuestion(source_file: string, question_number: number
 }
 
 export function exportUrl(format: "json" | "csv") {
-  return `${API_BASE_URL}/api/admin/export?format=${format}`;
+  return `${apiBaseUrl()}/api/admin/export?format=${format}`;
 }
 
 export async function downloadExport(format: "json" | "csv") {

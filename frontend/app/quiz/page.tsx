@@ -58,14 +58,7 @@ export default function QuizHubPage() {
         <Link href="/quiz/image" className="glass-card flex flex-1 flex-col gap-2 p-6 hover:opacity-90">
           <span className="text-[15px] font-semibold">Image Quiz</span>
           <span className="text-[13px] text-[var(--muted)]">
-            Answer questions shown as scanned exam images.
-          </span>
-        </Link>
-
-        <Link href="/quiz/qa" className="glass-card flex flex-1 flex-col gap-2 p-6 hover:opacity-90">
-          <span className="text-[15px] font-semibold">QA Image Quiz</span>
-          <span className="text-[13px] text-[var(--muted)]">
-            Question and each choice as separate images, in randomized order.
+            Answer scanned questions with each choice shown as a separate image.
           </span>
         </Link>
       </div>
