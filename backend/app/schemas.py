@@ -42,6 +42,7 @@ class AnswerIn(BaseModel):
 
 
 class SubmitIn(BaseModel):
+    task_id: uuid.UUID
     answers: list[AnswerIn]
 
 
@@ -56,6 +57,22 @@ class SubmitOut(BaseModel):
     score: int
     total: int
     per_question_results: list[PerQuestionResult]
+    attempt_id: uuid.UUID | None = None
+    submitted_at: datetime | None = None
+
+
+class AttemptAnswerOut(PerQuestionResult):
+    question_text: str
+
+
+class QuizAttemptOut(BaseModel):
+    id: uuid.UUID
+    task_id: uuid.UUID
+    task_name: str
+    score: int
+    total: int
+    submitted_at: datetime
+    per_question_results: list[AttemptAnswerOut]
 
 
 class LoginIn(BaseModel):

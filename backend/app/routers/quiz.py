@@ -7,13 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user
-from app.models import QaQuestion, Question, Task, User
+from app.models import QaQuestion, Question, QuizAttempt, QuizAttemptAnswer, Task, User
 from app.schemas import (
+    AttemptAnswerOut,
     PerQuestionResult,
     QaChoiceOut,
     QaQuestionOut,
     QaSubmitIn,
     QuizQuestionOut,
+    QuizAttemptOut,
     SubmitIn,
     SubmitOut,
     TaskOut,
@@ -46,7 +48,14 @@ def submit_quiz(body: SubmitIn, user: User = Depends(get_current_user), db: Sess
     if not body.answers:
         raise HTTPException(status_code=400, detail="No answers submitted")
 
+    task = db.get(Task, body.task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
     question_ids = [a.question_id for a in body.answers]
+    if len(question_ids) != len(set(question_ids)):
+        raise HTTPException(status_code=400, detail="Each question may only be answered once")
+
     questions = db.execute(select(Question).where(Question.id.in_(question_ids))).scalars().all()
     questions_by_id: dict[uuid.UUID, Question] = {q.id: q for q in questions}
 
@@ -56,6 +65,8 @@ def submit_quiz(body: SubmitIn, user: User = Depends(get_current_user), db: Sess
         question = questions_by_id.get(answer.question_id)
         if question is None:
             raise HTTPException(status_code=404, detail=f"Question {answer.question_id} not found")
+        if task.source_file and question.source_file != task.source_file:
+            raise HTTPException(status_code=400, detail=f"Question {answer.question_id} does not belong to this task")
         is_correct = answer.selected_answer == question.correct_answer
         if is_correct:
             score += 1
@@ -68,7 +79,82 @@ def submit_quiz(body: SubmitIn, user: User = Depends(get_current_user), db: Sess
             )
         )
 
-    return SubmitOut(score=score, total=len(body.answers), per_question_results=results)
+    attempt = QuizAttempt(
+        user_id=user.id,
+        task_id=task.id,
+        task_name=task.name,
+        score=score,
+        total=len(body.answers),
+    )
+    db.add(attempt)
+    db.flush()
+    db.add_all(
+        [
+            QuizAttemptAnswer(
+                attempt_id=attempt.id,
+                question_id=result.question_id,
+                position=position,
+                question_text=questions_by_id[result.question_id].question_text,
+                selected_answer=result.selected_answer,
+                correct_answer=result.correct_answer,
+                is_correct=result.is_correct,
+            )
+            for position, result in enumerate(results)
+        ]
+    )
+    db.commit()
+    db.refresh(attempt)
+
+    return SubmitOut(
+        score=score,
+        total=len(body.answers),
+        per_question_results=results,
+        attempt_id=attempt.id,
+        submitted_at=attempt.submitted_at,
+    )
+
+
+@router.get("/history", response_model=list[QuizAttemptOut])
+def get_quiz_history(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    attempts = db.execute(
+        select(QuizAttempt)
+        .where(QuizAttempt.user_id == user.id)
+        .order_by(QuizAttempt.submitted_at.desc())
+        .limit(50)
+    ).scalars().all()
+    if not attempts:
+        return []
+
+    attempt_ids = [attempt.id for attempt in attempts]
+    stored_answers = db.execute(
+        select(QuizAttemptAnswer)
+        .where(QuizAttemptAnswer.attempt_id.in_(attempt_ids))
+        .order_by(QuizAttemptAnswer.attempt_id, QuizAttemptAnswer.position)
+    ).scalars().all()
+    answers_by_attempt: dict[uuid.UUID, list[AttemptAnswerOut]] = {attempt_id: [] for attempt_id in attempt_ids}
+    for answer in stored_answers:
+        answers_by_attempt[answer.attempt_id].append(
+            AttemptAnswerOut(
+                question_id=answer.question_id,
+                question_text=answer.question_text,
+                selected_answer=answer.selected_answer,
+                correct_answer=answer.correct_answer,
+                is_correct=answer.is_correct,
+            )
+        )
+
+    return [
+        QuizAttemptOut(
+            id=attempt.id,
+            task_id=attempt.task_id,
+            task_name=attempt.task_name,
+            score=attempt.score,
+            total=attempt.total,
+            submitted_at=attempt.submitted_at,
+            per_question_results=answers_by_attempt[attempt.id],
+        )
+        for attempt in attempts
+    ]
 
 
 def _qa_out(q: QaQuestion) -> QaQuestionOut:

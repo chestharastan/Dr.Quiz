@@ -6,11 +6,10 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.config import settings
 from app.db import SessionLocal
-from app.models import ImageQuestion, QaQuestion, Question, User
+from app.models import QaQuestion, Question, User
 from app.security import hash_password
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "extracted"
-IMAGE_DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "extracted_images"
 QA_JSON_PATH = Path(settings.qa_images_dir).parent / "output_qa_json" / "all_questions.json"
 
 QUESTION_UPDATE_COLUMNS = (
@@ -24,8 +23,6 @@ QUESTION_UPDATE_COLUMNS = (
     "needs_review",
     "ocr_confidence",
 )
-
-IMAGE_QUESTION_UPDATE_COLUMNS = ("image_path", "correct_answer")
 
 
 def _seed_json_dir(db, data_dir: Path, model, update_columns: tuple[str, ...]) -> int:
@@ -76,14 +73,18 @@ def _seed_qa_questions(db) -> int:
     data = json.loads(QA_JSON_PATH.read_text(encoding="utf-8"))
     deduped: dict[tuple[str, int], dict] = {}
     skipped = 0
+    image_root = Path(settings.qa_images_dir)
     for quiz in data.get("quizzes", []):
         source_file = quiz["source"]
         for q in quiz["questions"]:
             choices_by_label = {c["label"]: c["image"] for c in q["choices"]}
+            image_paths = [q.get("questionImage")] + [
+                choices_by_label.get(label) for label in ("A", "B", "C", "D")
+            ]
             if (
                 not q.get("answer")
-                or not q.get("questionImage")
-                or not all(l in choices_by_label for l in ("A", "B", "C", "D"))
+                or not all(image_paths)
+                or not all((image_root / image_path).is_file() for image_path in image_paths)
             ):
                 skipped += 1
                 continue
@@ -112,7 +113,10 @@ def _seed_qa_questions(db) -> int:
     )
     db.execute(stmt)
     db.commit()
-    print(f"Seeded {len(records)} QA questions from {QA_JSON_PATH} ({skipped} skipped — no answer/choices)")
+    print(
+        f"Seeded {len(records)} QA questions from {QA_JSON_PATH} "
+        f"({skipped} skipped — incomplete or missing image files)"
+    )
     return len(records)
 
 
@@ -121,9 +125,6 @@ def run():
     try:
         total = _seed_json_dir(db, DATA_DIR, Question, QUESTION_UPDATE_COLUMNS)
         print(f"Total seeded: {total} questions from {DATA_DIR}")
-
-        image_total = _seed_json_dir(db, IMAGE_DATA_DIR, ImageQuestion, IMAGE_QUESTION_UPDATE_COLUMNS)
-        print(f"Total seeded: {image_total} image questions from {IMAGE_DATA_DIR}")
 
         qa_total = _seed_qa_questions(db)
         print(f"Total seeded: {qa_total} QA questions from {QA_JSON_PATH}")

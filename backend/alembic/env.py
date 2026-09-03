@@ -5,7 +5,14 @@ from sqlalchemy import engine_from_config, pool
 
 from app.config import settings
 from app.db import Base
-from app.models import ImageQuestion, QaQuestion, Question, Task, User  # noqa: F401 - ensures models are registered on Base.metadata
+from app.models import (  # noqa: F401 - ensures models are registered on Base.metadata
+    QaQuestion,
+    Question,
+    QuizAttempt,
+    QuizAttemptAnswer,
+    Task,
+    User,
+)
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
