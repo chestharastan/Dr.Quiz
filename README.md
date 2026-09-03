@@ -67,7 +67,7 @@ runs, and leaves it alone on subsequent runs.
 ```bash
 cd frontend
 npm install
-cp .env.local.example .env.local   # NEXT_PUBLIC_API_BASE_URL, defaults to :8000
+cp .env.local.example .env.local   # API URLs default to local port 8000
 npm run dev
 ```
 
@@ -78,6 +78,11 @@ output). Visit `/login` to sign in — admins land on `/admin`, users land on
 
 If your frontend ends up on a different port than 3000, add it to
 `CORS_ORIGINS` in `backend/.env` (comma-separated) and restart the backend.
+Browser API and image requests are always sent through the Next.js origin, so
+the app works the same way locally and from another device on the network. The
+server-side `BACKEND_API_BASE_URL` controls where Next.js forwards them.
+For development, add the frontend computer's LAN address to
+`ALLOWED_DEV_ORIGINS` (comma-separated) when it differs from the example.
 
 ## Roles
 
@@ -108,8 +113,10 @@ admin can then create more accounts from the Admin panel.
 
 - `/login` → `/quiz` — see your assigned task, click Start, answer one
   question per card (auto-advances, Previous/Next to navigate), submit, see
-  score and per-question correct answers. Progress is saved to the browser
-  so a refresh never loses answers; logging out clears it.
+  score and per-question correct answers. Submitted text-quiz attempts and
+  their answers are saved to Postgres and shown in the task history. In-progress
+  answers are saved to the browser so a refresh never loses them; logging out
+  clears that local progress.
 
 ## Deploying later (Vercel + Supabase)
 
