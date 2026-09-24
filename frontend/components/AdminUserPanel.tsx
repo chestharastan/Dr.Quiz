@@ -5,7 +5,8 @@ import { createUser, fetchUsers, updateUser, type AuthUser, type Role } from "@/
 
 export default function AdminUserPanel() {
   const [users, setUsers] = useState<AuthUser[]>([]);
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("user");
   const [error, setError] = useState("");
@@ -16,7 +17,9 @@ export default function AdminUserPanel() {
   }
 
   useEffect(() => {
-    void load();
+    fetchUsers()
+      .then(setUsers)
+      .catch((e) => setError(String(e)));
   }, []);
 
   async function handleCreate(e: React.FormEvent) {
@@ -24,8 +27,9 @@ export default function AdminUserPanel() {
     setSubmitting(true);
     setError("");
     try {
-      await createUser({ username, password, role });
-      setUsername("");
+      await createUser({ name, username: email, password, role });
+      setName("");
+      setEmail("");
       setPassword("");
       setRole("user");
       await load();
@@ -48,40 +52,55 @@ export default function AdminUserPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <form onSubmit={handleCreate} className="glass-card flex flex-wrap items-end gap-3 p-5">
-        <label className="flex flex-1 flex-col gap-1.5 sm:flex-none">
-          <span className="text-[13px] font-medium text-[var(--muted)]">Username</span>
+      <form onSubmit={handleCreate} autoComplete="off" className="glass-card flex flex-wrap items-end gap-3 p-5">
+        <label className="flex min-w-40 flex-1 flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-[var(--muted)]">Name</span>
           <input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
-            className="input-field w-full sm:w-36"
+            autoComplete="off"
+            placeholder="Full name"
+            className="input-field w-full"
           />
         </label>
-        <label className="flex flex-1 flex-col gap-1.5 sm:flex-none">
+        <label className="flex min-w-56 flex-[1.4] flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-[var(--muted)]">Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="name@gmail.com"
+            className="input-field w-full"
+          />
+        </label>
+        <label className="flex min-w-40 flex-1 flex-col gap-1.5">
           <span className="text-[13px] font-medium text-[var(--muted)]">Password</span>
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="input-field w-full sm:w-36"
+            autoComplete="new-password"
+            className="input-field w-full"
           />
         </label>
-        <label className="flex flex-1 flex-col gap-1.5 sm:flex-none">
+        <label className="flex w-full flex-col gap-1.5 sm:w-28">
           <span className="text-[13px] font-medium text-[var(--muted)]">Role</span>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            className="input-field w-full sm:w-28"
-          >
+          <select value={role} onChange={(e) => setRole(e.target.value as Role)} className="input-field w-full">
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
         </label>
         <button
           type="submit"
-          disabled={submitting || !username || !password}
+          disabled={submitting || !name.trim() || !email.trim() || !password}
           className="btn-primary w-full sm:w-auto"
         >
           Create user
@@ -97,8 +116,11 @@ export default function AdminUserPanel() {
           {/* Mobile: stacked cards */}
           <div className="flex flex-col gap-3 sm:hidden">
             {users.map((u) => (
-              <div key={u.id} className="glass-card flex items-center justify-between gap-2 p-4">
-                <span className="text-[14px] font-medium">{u.username}</span>
+              <div key={u.id} className="glass-card flex items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="truncate text-[14px] font-medium">{u.name || "—"}</p>
+                  <p className="truncate text-[13px] text-[var(--muted)]">{u.username}</p>
+                </div>
                 <select
                   value={u.role}
                   onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
@@ -112,19 +134,21 @@ export default function AdminUserPanel() {
           </div>
 
           {/* Tablet/desktop: table */}
-          <div className="glass-card hidden overflow-x-auto p-2 sm:block">
-            <table className="w-full border-collapse text-sm">
+          <div className="glass-card hidden overflow-x-auto sm:block">
+            <table className="data-table w-full text-[14px]">
               <thead>
-                <tr className="text-left text-[13px] text-[var(--muted)]">
-                  <th className="p-3">Username</th>
-                  <th className="p-3">Role</th>
+                <tr className="text-left">
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Role</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id} className="border-t border-[var(--hairline)]">
-                    <td className="p-3 font-medium">{u.username}</td>
-                    <td className="p-3">
+                  <tr key={u.id}>
+                    <td className="font-medium">{u.name || <span className="text-[var(--muted)]">—</span>}</td>
+                    <td className="text-[var(--muted)]">{u.username}</td>
+                    <td>
                       <select
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}

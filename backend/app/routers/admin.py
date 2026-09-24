@@ -4,13 +4,23 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import require_admin
 from app.models import Question, Task, User
-from app.schemas import AdminQuestionOut, TaskIn, TaskOut, TaskUpdateIn, UserCreateIn, UserOut, UserUpdateIn
+from app.schemas import (
+    AdminQuestionOut,
+    AdminQuestionPage,
+    AdminQuestionUpdateIn,
+    TaskIn,
+    TaskOut,
+    TaskUpdateIn,
+    UserCreateIn,
+    UserOut,
+    UserUpdateIn,
+)
 from app.security import hash_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -28,12 +38,15 @@ EXPORT_FIELDS = [
 ]
 
 
-@router.get("/questions", response_model=list[AdminQuestionOut])
+@router.get("/questions", response_model=AdminQuestionPage)
 def list_questions(
     source_file: str | None = None,
     question_number: int | None = None,
     include_inactive: bool = False,
     needs_review: bool | None = None,
+    search: str | None = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
     stmt = select(Question)
@@ -45,8 +58,30 @@ def list_questions(
         stmt = stmt.where(Question.question_number == question_number)
     if needs_review is not None:
         stmt = stmt.where(Question.needs_review.is_(needs_review))
-    stmt = stmt.order_by(Question.ocr_confidence.asc().nulls_last(), Question.source_file, Question.question_number)
-    return db.execute(stmt).scalars().all()
+    if search and search.strip():
+        # Match the text anywhere in the question or its choices; % and _ are searched literally.
+        escaped = search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        columns = (Question.question_text, Question.choice_a, Question.choice_b, Question.choice_c, Question.choice_d)
+        stmt = stmt.where(or_(*(column.ilike(f"%{escaped}%", escape="\\") for column in columns)))
+    total = db.execute(select(func.count()).select_from(stmt.subquery())).scalar_one()
+    stmt = (
+        stmt.order_by(Question.source_file, Question.question_number)
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    return AdminQuestionPage(items=db.execute(stmt).scalars().all(), total=total)
+
+
+@router.patch("/questions/{question_id}", response_model=AdminQuestionOut)
+def update_question(question_id: uuid.UUID, body: AdminQuestionUpdateIn, db: Session = Depends(get_db)):
+    question = db.get(Question, question_id)
+    if question is None:
+        raise HTTPException(status_code=404, detail="Question not found")
+    for field, value in body.model_dump(exclude_unset=True, exclude_none=True).items():
+        setattr(question, field, value)
+    db.commit()
+    db.refresh(question)
+    return question
 
 
 @router.delete("/questions")
@@ -136,11 +171,12 @@ def list_users(db: Session = Depends(get_db)):
 
 @router.post("/users", response_model=UserOut, status_code=201)
 def create_user(body: UserCreateIn, db: Session = Depends(get_db)):
-    existing = db.execute(select(User).where(User.username == body.username)).scalar_one_or_none()
+    existing = db.execute(select(User).where(func.lower(User.username) == body.username)).scalar_one_or_none()
     if existing:
-        raise HTTPException(status_code=409, detail="Username already taken")
+        raise HTTPException(status_code=409, detail="An account with this email already exists")
     user = User(
         username=body.username,
+        name=body.name,
         password_hash=hash_password(body.password),
         role=body.role,
     )

@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { QuizQuestion } from "@/lib/api";
+import { LETTERS, choiceText, type ShuffledQuestion } from "@/lib/shuffle";
 
-const CHOICE_KEYS = ["A", "B", "C", "D"] as const;
 const ADVANCE_DELAY_MS = 280;
 
 export default function QuizForm({
@@ -15,7 +14,7 @@ export default function QuizForm({
   onPrev,
   onSubmit,
 }: {
-  questions: QuizQuestion[];
+  questions: ShuffledQuestion[];
   currentIndex: number;
   answers: Record<string, string>;
   onAnswer: (questionId: string, choice: string) => void;
@@ -68,18 +67,18 @@ export default function QuizForm({
         </p>
 
         <div className="mt-5 flex flex-col gap-2">
-          {CHOICE_KEYS.map((key) => {
-            const text = question[`choice_${key.toLowerCase()}` as keyof QuizQuestion];
-            const isSelected = selected === key;
+          {/* Shown in this question's shuffled order; the answer keeps its original letter for grading. */}
+          {question.order.map((letter, position) => {
+            const isSelected = selected === letter;
             return (
               <button
-                key={key}
+                key={letter}
                 type="button"
-                onClick={() => handleChoice(key)}
+                onClick={() => handleChoice(letter)}
                 className={`choice-row ${isSelected ? "choice-row-selected" : ""}`}
               >
-                <span className="choice-letter">{key}</span>
-                <span className="flex-1 text-left">{text}</span>
+                <span className="choice-letter">{LETTERS[position]}</span>
+                <span className="flex-1 text-left">{choiceText(question, letter)}</span>
                 {isSelected && (
                   <svg
                     viewBox="0 0 20 20"

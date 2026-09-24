@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -16,9 +16,11 @@ COOKIE_MAX_AGE = settings.access_token_expire_minutes * 60
 
 @router.post("/login", response_model=UserOut)
 def login(body: LoginIn, response: Response, db: Session = Depends(get_db)):
-    user = db.execute(select(User).where(User.username == body.username)).scalar_one_or_none()
+    # Emails are case-insensitive: "Tester@Gmail.com" is the same login as "tester@gmail.com".
+    login_name = body.username.strip().lower()
+    user = db.execute(select(User).where(func.lower(User.username) == login_name)).scalar_one_or_none()
     if user is None or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid username or password")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
     token = create_access_token(str(user.id), user.role)
     response.set_cookie(
         key=COOKIE_NAME,

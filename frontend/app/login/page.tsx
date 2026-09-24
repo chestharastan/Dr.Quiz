@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "@/lib/api";
+import BrandMark from "@/components/BrandMark";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,25 +21,30 @@ export default function LoginPage() {
       router.push(user.role === "admin" ? "/admin" : "/quiz");
       router.refresh();
     } catch {
-      setError("Invalid username or password.");
+      setError("Invalid email or password.");
       setSubmitting(false);
     }
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
+    <main className="flex min-h-dvh flex-col items-center justify-center px-4 py-8">
       <form onSubmit={handleSubmit} className="glass-card flex w-full max-w-sm flex-col gap-5 p-8">
-        <div className="flex flex-col gap-1 text-center">
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">Quiz Dr</h1>
-          <p className="text-[13px] text-[var(--muted)]">Sign in to continue</p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <BrandMark size="lg" />
+          <div>
+            <h1 className="text-[24px] font-bold tracking-[-0.025em]">Quiz Dr</h1>
+            <p className="text-[14px] text-[var(--muted)]">Sign in to continue</p>
+          </div>
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-[var(--muted)]">Email or username</span>
+          <span className="text-[13px] font-medium text-[var(--muted)]">Email</span>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoFocus
+            inputMode="email"
+            placeholder="name@gmail.com"
             autoComplete="username"
             autoCapitalize="none"
             autoCorrect="off"
