@@ -4,7 +4,7 @@ const CONFIGURED_API_BASE_URL = (
 
 function apiBaseUrl() {
   // Browser requests always go through the Next.js origin. This keeps auth
-  // cookies, API calls, and images on one host and works identically from the
+  // cookies and API calls on one host and works identically from the
   // development computer and phones on the local network.
   return typeof window === "undefined" ? CONFIGURED_API_BASE_URL : "";
 }
@@ -35,32 +35,9 @@ export type QuizQuestion = {
   choice_d: string;
 };
 
-export type QaChoice = {
-  label: "A" | "B" | "C" | "D";
-  image: string;
-};
-
-export type QaQuizQuestion = {
-  id: string;
-  source_file: string;
-  question_number: number;
-  question_image: string;
-  choices: QaChoice[];
-};
-
-export function qaQuestionLabel(q: QaQuizQuestion) {
-  const title = q.source_file.replace(/\.md$/i, "");
-  return `${title} · Q${String(q.question_number).padStart(4, "0")}`;
-}
-
-export function qaImageUrl(imagePath: string) {
-  const encoded = imagePath.split("/").map(encodeURIComponent).join("/");
-  return `${apiBaseUrl()}/static/qa_images/${encoded}`;
-}
-
 export type AdminQuestion = QuizQuestion & {
   source_file: string;
-  source_page: number;
+  source_page: number | null;
   question_number: number;
   correct_answer: "A" | "B" | "C" | "D";
   is_active: boolean;
@@ -138,17 +115,6 @@ export function submitQuiz(taskId: string, answers: { question_id: string; selec
 
 export function fetchQuizHistory() {
   return request<QuizAttempt[]>("/api/quiz/history");
-}
-
-export function fetchQaQuestions(count: number) {
-  return request<QaQuizQuestion[]>(`/api/quiz/qa-questions?count=${count}`);
-}
-
-export function submitQaQuiz(answers: { question_id: string; selected_answer: string }[]) {
-  return request<SubmitResult>(`/api/quiz/qa-submit`, {
-    method: "POST",
-    body: JSON.stringify({ answers }),
-  });
 }
 
 export function fetchAdminQuestions(

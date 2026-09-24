@@ -6,7 +6,6 @@ from sqlalchemy import engine_from_config, pool
 from app.config import settings
 from app.db import Base
 from app.models import (  # noqa: F401 - ensures models are registered on Base.metadata
-    QaQuestion,
     Question,
     QuizAttempt,
     QuizAttemptAnswer,
@@ -15,7 +14,8 @@ from app.models import (  # noqa: F401 - ensures models are registered on Base.m
 )
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+# Escape "%" (e.g. a URL-encoded password) because Alembic's config is a ConfigParser.
+config.set_main_option("sqlalchemy.url", settings.database_url.replace("%", "%%"))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

@@ -1,6 +1,15 @@
+# Only backend/ and frontend/ (plus this file and README.md) go to GitHub.
+# Everything else in this folder (scanned PDFs, split-pdf/, OCR work) stays local.
+/*
+!/.gitignore
+!/README.md
+!/backend/
+!/frontend/
+
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Secrets (real values live only in these local files; *.example files are committed)
 backend/.env

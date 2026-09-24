@@ -105,26 +105,3 @@ class QuizAttemptAnswer(Base):
     selected_answer: Mapped[str] = mapped_column(String(1), nullable=False)
     correct_answer: Mapped[str] = mapped_column(String(1), nullable=False)
     is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False)
-
-
-class QaQuestion(Base):
-    """A quiz question with a separate cropped image per choice (no letters baked into any image)."""
-
-    __tablename__ = "qa_questions"
-    __table_args__ = (
-        UniqueConstraint("source_file", "question_number", name="uq_qa_source_file_question_number"),
-        CheckConstraint("correct_answer IN ('A','B','C','D')", name="ck_qa_correct_answer_letter"),
-    )
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    source_file: Mapped[str] = mapped_column(String, nullable=False)
-    question_number: Mapped[int] = mapped_column(Integer, nullable=False)
-    question_image: Mapped[str] = mapped_column(String, nullable=False)
-    choice_a_image: Mapped[str] = mapped_column(String, nullable=False)
-    choice_b_image: Mapped[str] = mapped_column(String, nullable=False)
-    choice_c_image: Mapped[str] = mapped_column(String, nullable=False)
-    choice_d_image: Mapped[str] = mapped_column(String, nullable=False)
-    correct_answer: Mapped[str] = mapped_column(String(1), nullable=False)
-    flagged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
