@@ -119,27 +119,3 @@ class UserCreateIn(BaseModel):
 
 class UserUpdateIn(BaseModel):
     role: Literal["admin", "user"] | None = None
-
-
-class QaChoiceOut(BaseModel):
-    """A single choice's image, labeled with its ORIGINAL source letter (not its display position)."""
-
-    label: Literal["A", "B", "C", "D"]
-    image: str
-
-
-class QaQuestionOut(BaseModel):
-    id: uuid.UUID
-    source_file: str
-    question_number: int
-    question_image: str
-    choices: list[QaChoiceOut]
-
-
-class QaAnswerIn(BaseModel):
-    question_id: uuid.UUID
-    selected_answer: Literal["A", "B", "C", "D"]
-
-
-class QaSubmitIn(BaseModel):
-    answers: list[QaAnswerIn]

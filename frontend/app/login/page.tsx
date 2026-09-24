@@ -34,11 +34,15 @@ export default function LoginPage() {
         </div>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-[13px] font-medium text-[var(--muted)]">Username</span>
+          <span className="text-[13px] font-medium text-[var(--muted)]">Email or username</span>
           <input
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             autoFocus
+            autoComplete="username"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
             className="input-field"
           />
         </label>

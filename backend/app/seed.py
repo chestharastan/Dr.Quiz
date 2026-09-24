@@ -6,11 +6,11 @@ from sqlalchemy.dialects.postgresql import insert
 
 from app.config import settings
 from app.db import SessionLocal
-from app.models import QaQuestion, Question, User
+from app.models import Question, User
 from app.security import hash_password
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "extracted"
-QA_JSON_PATH = Path(settings.qa_images_dir).parent / "output_qa_json" / "all_questions.json"
+# Copy of split-pdf/outputjson/all.json (every source PDF in one file, each row tagged with its source_file).
+QUESTIONS_PATH = Path(__file__).resolve().parents[1] / "data" / "questions.json"
 
 QUESTION_UPDATE_COLUMNS = (
     "source_page",
@@ -25,109 +25,34 @@ QUESTION_UPDATE_COLUMNS = (
 )
 
 
-def _seed_json_dir(db, data_dir: Path, model, update_columns: tuple[str, ...]) -> int:
-    total = 0
-    for path in sorted(data_dir.glob("*.json")):
-        text = path.read_text(encoding="utf-8").strip()
-        if not text:
-            continue
-        records = json.loads(text)
-        if not records:
-            continue
-        deduped = {}
-        for r in records:
-            key = (r["source_file"], r["question_number"])
-            if key in deduped:
-                print(f"  WARNING: duplicate question_number {key[1]} in {path.name} — keeping last occurrence")
-            deduped[key] = r
-        records = list(deduped.values())
-        stmt = insert(model).values(records)
-        update_cols = {col: stmt.excluded[col] for col in update_columns}
-        stmt = stmt.on_conflict_do_update(
-            index_elements=["source_file", "question_number"],
-            set_=update_cols,
-        )
-        db.execute(stmt)
-        db.commit()
-        total += len(records)
-        print(f"Seeded {len(records)} rows from {path.name}")
-    return total
-
-
-QA_QUESTION_UPDATE_COLUMNS = (
-    "question_image",
-    "choice_a_image",
-    "choice_b_image",
-    "choice_c_image",
-    "choice_d_image",
-    "correct_answer",
-    "flagged",
-)
-
-
-def _seed_qa_questions(db) -> int:
-    if not QA_JSON_PATH.exists():
-        print(f"QA source not found at {QA_JSON_PATH} — skipping.")
-        return 0
-
-    data = json.loads(QA_JSON_PATH.read_text(encoding="utf-8"))
-    deduped: dict[tuple[str, int], dict] = {}
-    skipped = 0
-    image_root = Path(settings.qa_images_dir)
-    for quiz in data.get("quizzes", []):
-        source_file = quiz["source"]
-        for q in quiz["questions"]:
-            choices_by_label = {c["label"]: c["image"] for c in q["choices"]}
-            image_paths = [q.get("questionImage")] + [
-                choices_by_label.get(label) for label in ("A", "B", "C", "D")
-            ]
-            if (
-                not q.get("answer")
-                or not all(image_paths)
-                or not all((image_root / image_path).is_file() for image_path in image_paths)
-            ):
-                skipped += 1
-                continue
-            key = (source_file, int(q["questionNumber"]))
-            deduped[key] = {
-                "source_file": source_file,
-                "question_number": key[1],
-                "question_image": q["questionImage"],
-                "choice_a_image": choices_by_label["A"],
-                "choice_b_image": choices_by_label["B"],
-                "choice_c_image": choices_by_label["C"],
-                "choice_d_image": choices_by_label["D"],
-                "correct_answer": q["answer"],
-                "flagged": bool(q.get("flags")),
-            }
-
+def _seed_questions(db, path: Path) -> int:
+    records = json.loads(path.read_text(encoding="utf-8"))
+    deduped = {}
+    for r in records:
+        key = (r["source_file"], r["question_number"])
+        if key in deduped:
+            print(f"  WARNING: duplicate question {key} in {path.name} — keeping last occurrence")
+        deduped[key] = r
     records = list(deduped.values())
     if not records:
         return 0
 
-    stmt = insert(QaQuestion).values(records)
-    update_cols = {col: stmt.excluded[col] for col in QA_QUESTION_UPDATE_COLUMNS}
+    stmt = insert(Question).values(records)
+    update_cols = {col: stmt.excluded[col] for col in QUESTION_UPDATE_COLUMNS}
     stmt = stmt.on_conflict_do_update(
         index_elements=["source_file", "question_number"],
         set_=update_cols,
     )
     db.execute(stmt)
     db.commit()
-    print(
-        f"Seeded {len(records)} QA questions from {QA_JSON_PATH} "
-        f"({skipped} skipped — incomplete or missing image files)"
-    )
     return len(records)
 
 
 def run():
     db = SessionLocal()
     try:
-        total = _seed_json_dir(db, DATA_DIR, Question, QUESTION_UPDATE_COLUMNS)
-        print(f"Total seeded: {total} questions from {DATA_DIR}")
-
-        qa_total = _seed_qa_questions(db)
-        print(f"Total seeded: {qa_total} QA questions from {QA_JSON_PATH}")
+        total = _seed_questions(db, QUESTIONS_PATH)
+        print(f"Seeded {total} questions from {QUESTIONS_PATH}")
 
         ensure_initial_admin(db)
     finally:

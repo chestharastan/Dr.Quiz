@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -11,7 +12,15 @@ class Settings(BaseSettings):
     cookie_secure: bool = False
     initial_admin_username: str = "admin"
     initial_admin_password: str | None = None
-    qa_images_dir: str = "/home/thareah/Quiz_Dr/output_qa"
+
+    @field_validator("database_url")
+    @classmethod
+    def use_psycopg_driver(cls, url: str) -> str:
+        # Supabase and Render hand out postgres:// or postgresql:// URLs; SQLAlchemy would then look for psycopg2.
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                return "postgresql+psycopg://" + url[len(prefix) :]
+        return url
 
     @property
     def cors_origin_list(self) -> list[str]:

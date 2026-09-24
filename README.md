@@ -1,47 +1,60 @@
 # Quiz Dr
 
-A QCM (multiple-choice) test system built from the Khmer-language midwifery
-exam bank scanned in `source/`. Admins curate the question bank; students
-take scored quizzes. Stack: FastAPI + Postgres (Supabase later) + Next.js
-(Vercel later). Runs fully locally today.
+A QCM (multiple-choice) test system built from a scanned Khmer-language
+midwifery exam bank. Admins curate the question bank; users take
+scored quizzes, and every submitted answer is stored. Stack: FastAPI (Render)
++ Postgres (Supabase) + Next.js (Vercel). Runs fully locally too.
 
 ## Layout
 
 ```
-source/                      raw scanned PDFs (input, untouched)
-data/extracted/*.json        one question-bank JSON per source PDF (source of truth for DB seed)
-backend/                     FastAPI app, SQLAlchemy models, Alembic migrations, OCR pipeline
-frontend/                    Next.js app (student quiz + admin panel)
-docker-compose.yml           local Postgres for dev
+backend/                     FastAPI app, SQLAlchemy models, Alembic migrations
+backend/data/questions.json  the question bank (text only), loaded into Postgres by app.seed
+backend/docker-compose.yml   optional local Postgres for development
+frontend/                    Next.js app (quiz + admin panel), client-rendered
 ```
 
-## Data provenance and accuracy note
+Only these go to GitHub (see `.gitignore`). The scanned PDFs and the
+`split-pdf/` tools that turned them into `questions.json` stay on the
+author's computer.
 
-`data/extracted/Untitled 6.json` (101 questions, #421–521) was transcribed
-by reading each PDF page directly (not OCR — Tesseract was tested and
-rejected for full-page use because it misreads Latin option letters, Khmer
-numerals, and the answer-key column). Answer-key letters were read with high
-confidence; a subset of longer/technical questions (roughly #471–490 and
-#501–520, covering dystocia/partograph and postpartum clinical detail) may
-have minor phrasing imperfections. It's marked `needs_review: false` in the
-data since it's fully hand-verified.
+## Where the questions live
 
-Any other file under `data/extracted/` produced by the OCR pipeline
-(`backend/app/ocr/`, see below) is marked `needs_review: true` with an
-`ocr_confidence` score and should be treated as unverified until checked in
-the admin panel — filter by "Needs review only" and cross-check against
-`source_file` + `source_page` + `question_number` shown per row.
+The questions are in the **backend** (`backend/data/questions.json` →
+`questions` table), not in the frontend bundle:
+
+- The browser only ever receives question text and the four choices. The
+  correct answers stay on the server, which grades each submission and stores
+  it (`quiz_attempts` + `quiz_attempt_answers`).
+- There is one copy of the bank, so admin edits (soft-delete, review filter)
+  apply to the quiz immediately.
+- A quiz only downloads the questions it needs (20 questions ≈ 13 KB), chosen
+  at random by Postgres in about 1.5 ms. With Render and Supabase in the same
+  region, a quiz start costs one round trip from the user to that region.
+
+`questions.json` is a copy of `split-pdf/outputjson/all.json`: all 7 source
+PDFs in one file (1,945 questions), each row tagged with its `source_file`, so
+tasks can still be limited to one PDF. Every question was checked against the
+scans (`split-pdf/fixes.json`). 47 questions are marked `needs_review: true`
+(for example, a scan that printed fewer than 4 options, filled with "none of the
+above"). Find them in the admin panel with "Needs review only".
+
+To update the bank: re-run `split-pdf/text_to_json.py`, copy
+`split-pdf/outputjson/all.json` over `backend/data/questions.json`, then run
+`python3 -m app.seed` again.
 
 ## Local setup
 
 ### 1. Start Postgres
 
 ```bash
+cd backend
 docker compose up -d
 ```
 
 This runs Postgres on `localhost:5433` (not 5432, to avoid clashing with
-other local projects) with database/user/password `quizdr`.
+other local projects) with database/user/password `quizdr`. Or skip it and
+point `DATABASE_URL` in `backend/.env` at Supabase (see Deploying).
 
 ### 2. Backend
 
@@ -55,6 +68,11 @@ python3 -m uvicorn app.main:app --reload --port 8000
 ```
 
 API is now at `http://localhost:8000`. Check `http://localhost:8000/api/health`.
+
+On a database that already has the old question bank, `alembic upgrade head`
+(migration `d4f7a2c91b3e`) removes the old questions, the old attempt history
+and the image-quiz tables. Users and tasks are kept. `app.seed` then loads the
+new bank.
 
 Re-running `python3 -m app.seed` is safe (idempotent upsert keyed on
 `source_file` + `question_number`) and won't undo admin deletions elsewhere,
@@ -78,8 +96,8 @@ output). Visit `/login` to sign in — admins land on `/admin`, users land on
 
 If your frontend ends up on a different port than 3000, add it to
 `CORS_ORIGINS` in `backend/.env` (comma-separated) and restart the backend.
-Browser API and image requests are always sent through the Next.js origin, so
-the app works the same way locally and from another device on the network. The
+Browser API requests are always sent through the Next.js origin, so the app
+works the same way locally and from another device on the network. The
 server-side `BACKEND_API_BASE_URL` controls where Next.js forwards them.
 For development, add the frontend computer's LAN address to
 `ALLOWED_DEV_ORIGINS` (comma-separated) when it differs from the example.
@@ -87,16 +105,15 @@ For development, add the frontend computer's LAN address to
 ## Roles
 
 Two roles: **admin** and **user**, backed by real accounts (bcrypt-hashed
-passwords, JWT session cookie) instead of the old shared `ADMIN_TOKEN`. The
-first admin account is created by `python3 -m app.seed` from
-`INITIAL_ADMIN_USERNAME`/`INITIAL_ADMIN_PASSWORD` in `backend/.env`; that
-admin can then create more accounts from the Admin panel.
+passwords, JWT session cookie). The first admin account is created by
+`python3 -m app.seed` from `INITIAL_ADMIN_USERNAME` (a username or an email)
+and `INITIAL_ADMIN_PASSWORD` in `backend/.env`; that admin can then create
+more accounts from the Admin panel. Changing these values later doesn't
+change an account that already exists.
 
 - **Admin** — manages the question bank, creates **tasks** (a named quiz:
-  a question count, optionally scoped to one source file), creates user
-  accounts, and assigns each user a task.
-- **User** — logs in at `/login`, sees only their assigned task, and takes
-  it. No self-serve question count anymore — the assigned task decides.
+  a question count, optionally limited to one source file) and user accounts.
+- **User** — logs in at `/login`, picks a task, and takes it.
 
 ## Admin workflow
 
@@ -105,25 +122,53 @@ admin can then create more accounts from the Admin panel.
   (sets `is_active = false`, keeping the row for audit/undo — no restore
   button yet, toggle "Include deleted" to see hidden ones), export JSON/CSV.
 - **Tasks tab** — create a named task (question count + optional source file
-  filter) that can be assigned to users.
-- **Users tab** — create a user (username/password/role), and reassign any
-  user's task at any time from the table.
+  filter) that users can pick.
+- **Users tab** — create a user (username/password/role) and change roles.
 
-## Student workflow
+## User workflow
 
-- `/login` → `/quiz` — see your assigned task, click Start, answer one
-  question per card (auto-advances, Previous/Next to navigate), submit, see
-  score and per-question correct answers. Submitted text-quiz attempts and
-  their answers are saved to Postgres and shown in the task history. In-progress
-  answers are saved to the browser so a refresh never loses them; logging out
-  clears that local progress.
+- `/login` → `/quiz` — pick a task, click it to start, answer one question per
+  card (auto-advances, Previous/Next to navigate), submit, see score and
+  per-question correct answers. Submitted attempts and their answers are saved
+  to Postgres and shown in the attempt history. In-progress answers are saved
+  to the browser so a refresh never loses them; logging out clears that local
+  progress.
 
-## Deploying later (Vercel + Supabase)
+## Deploying (Supabase + Render + Vercel)
 
-Not done yet — this is local-only for now. When ready: create a Supabase
-project, point `DATABASE_URL` at it, run `alembic upgrade head` and
-`python3 -m app.seed` once against it, then deploy `backend/` (FastAPI/ASGI
-app, Vercel's Python runtime auto-detects `app.main:app`) and `frontend/`
-(standard Next.js) as separate Vercel projects, wiring
-`NEXT_PUBLIC_API_BASE_URL` to the deployed backend URL and `CORS_ORIGINS` to
-the deployed frontend URL.
+Put Supabase and Render in the same region, close to the users (e.g.
+Singapore). Vercel's region setting doesn't matter here. Every page is static
+and client-rendered, so Vercel serves the pages from its global CDN. The only
+server work is the FastAPI backend.
+
+1. **Supabase** — create a project. Under *Connect*, copy the **Session
+   pooler** connection string (Render can't reach the IPv6-only direct
+   connection) and put your database password in it. Special characters in
+   the password must be URL-encoded (e.g. `/` → `%2F`). The URL can stay
+   `postgresql://...`; the backend switches it to the psycopg driver itself.
+2. **Load the database once**, from your computer: put the URL in
+   `backend/.env` as `DATABASE_URL`, then
+   ```bash
+   cd backend
+   python3 -m alembic upgrade head
+   python3 -m app.seed
+   ```
+   The seed creates the admin account from `INITIAL_ADMIN_USERNAME` (an email
+   works) and `INITIAL_ADMIN_PASSWORD` in `backend/.env`. Run both again
+   whenever `questions.json` changes or a new migration is added.
+   Migrations turn on row level security for every table, which shuts
+   Supabase's public Data API out of them (the backend owns the tables, so it
+   isn't affected). A migration that adds a table must enable RLS on it too.
+3. **Render** — new Web Service from this repo, root directory `backend`,
+   build `pip install -r requirements.txt`, start
+   `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Environment:
+   `DATABASE_URL` (same as step 2), `SECRET_KEY` (long random string),
+   `COOKIE_SECURE=true`, `CORS_ORIGINS=https://<your-app>.vercel.app`.
+   The `INITIAL_ADMIN_*` values aren't needed there. Render's free plan
+   sleeps after 15 idle minutes, and the next request then takes up to about a
+   minute. A paid instance (or a periodic ping of `/api/health`) avoids that.
+4. **Vercel** — import the repo with root directory `frontend`, and set
+   `BACKEND_API_BASE_URL=https://<your-service>.onrender.com`. It's read at
+   build time, so redeploy after changing it. The browser only talks to
+   Vercel, which proxies `/api/*` to Render. That keeps the login cookie
+   first-party.

@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.routers import admin, auth, quiz
@@ -18,11 +17,6 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(quiz.router)
 app.include_router(admin.router)
-app.mount(
-    "/static/qa_images",
-    StaticFiles(directory=settings.qa_images_dir),
-    name="qa_images",
-)
 
 
 @app.get("/api/health")
