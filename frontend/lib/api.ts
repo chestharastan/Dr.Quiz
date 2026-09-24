@@ -21,7 +21,8 @@ export type Task = {
 
 export type AuthUser = {
   id: string;
-  username: string;
+  username: string; // the login: an email address
+  name: string | null;
   role: Role;
   created_at: string;
 };
@@ -42,7 +43,11 @@ export type AdminQuestion = QuizQuestion & {
   correct_answer: "A" | "B" | "C" | "D";
   is_active: boolean;
   needs_review: boolean;
-  ocr_confidence: number | null;
+};
+
+export type AdminQuestionPage = {
+  items: AdminQuestion[];
+  total: number;
 };
 
 export type SubmitResult = {
@@ -60,15 +65,42 @@ export type SubmitResult = {
 
 export type QuizAttempt = {
   id: string;
-  task_id: string;
+  task_id: string | null; // null for a quick quiz
   task_name: string;
   score: number;
   total: number;
   submitted_at: string;
   per_question_results: (SubmitResult["per_question_results"][number] & {
     question_text: string;
+    selected_text: string | null;
+    correct_text: string | null;
   })[];
 };
+
+// Shows as just the message (String(error) is what the pages display).
+class ApiError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+  toString() {
+    return this.message;
+  }
+}
+
+async function apiError(res: Response) {
+  const body = await res.text();
+  let message = `${res.status} ${res.statusText}`;
+  try {
+    const { detail } = JSON.parse(body);
+    if (typeof detail === "string") message = detail;
+    else if (Array.isArray(detail)) {
+      message = detail.map((d: { msg: string }) => d.msg.replace(/^Value error, /, "")).join("; ");
+    }
+  } catch {
+    // not JSON: keep the status line
+  }
+  return new ApiError(message, res.status);
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${apiBaseUrl()}${path}`, {
@@ -76,10 +108,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     credentials: "include",
     headers: { "Content-Type": "application/json", ...options.headers },
   });
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`${res.status} ${res.statusText}: ${body}`);
-  }
+  if (!res.ok) throw await apiError(res);
   return res.json();
 }
 
@@ -102,14 +131,27 @@ export function fetchAvailableTasks() {
   return request<Task[]>("/api/quiz/tasks");
 }
 
-export function fetchQuizQuestions(taskId: string) {
-  return request<QuizQuestion[]>(`/api/quiz/questions?task_id=${taskId}`);
+/** Random questions: a task's, or a quick quiz's (count + optional source file). */
+export function fetchQuizQuestions(query: { task_id?: string; count?: number; source_file?: string }) {
+  const params = new URLSearchParams();
+  if (query.task_id) params.set("task_id", query.task_id);
+  if (query.count !== undefined) params.set("count", String(query.count));
+  if (query.source_file) params.set("source_file", query.source_file);
+  return request<QuizQuestion[]>(`/api/quiz/questions?${params.toString()}`);
 }
 
-export function submitQuiz(taskId: string, answers: { question_id: string; selected_answer: string }[]) {
+export function fetchQuizSources() {
+  return request<string[]>("/api/quiz/source-files");
+}
+
+export function submitQuiz(body: {
+  task_id?: string; // omitted for a quick quiz
+  quiz_name?: string;
+  answers: { question_id: string; selected_answer: string }[];
+}) {
   return request<SubmitResult>(`/api/quiz/submit`, {
     method: "POST",
-    body: JSON.stringify({ task_id: taskId, answers }),
+    body: JSON.stringify(body),
   });
 }
 
@@ -123,6 +165,9 @@ export function fetchAdminQuestions(
     question_number?: number;
     include_inactive?: boolean;
     needs_review?: boolean;
+    search?: string;
+    page?: number;
+    page_size?: number;
   } = {}
 ) {
   const params = new URLSearchParams();
@@ -130,7 +175,24 @@ export function fetchAdminQuestions(
   if (filters.question_number !== undefined) params.set("question_number", String(filters.question_number));
   if (filters.include_inactive) params.set("include_inactive", "true");
   if (filters.needs_review !== undefined) params.set("needs_review", String(filters.needs_review));
-  return request<AdminQuestion[]>(`/api/admin/questions?${params.toString()}`);
+  if (filters.search) params.set("search", filters.search);
+  if (filters.page !== undefined) params.set("page", String(filters.page));
+  if (filters.page_size !== undefined) params.set("page_size", String(filters.page_size));
+  return request<AdminQuestionPage>(`/api/admin/questions?${params.toString()}`);
+}
+
+export type AdminQuestionUpdate = Partial<
+  Pick<
+    AdminQuestion,
+    "question_text" | "choice_a" | "choice_b" | "choice_c" | "choice_d" | "correct_answer" | "needs_review" | "is_active"
+  >
+>;
+
+export function updateAdminQuestion(id: string, body: AdminQuestionUpdate) {
+  return request<AdminQuestion>(`/api/admin/questions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
 }
 
 export function deleteAdminQuestion(source_file: string, question_number: number) {
@@ -182,7 +244,7 @@ export function fetchUsers() {
   return request<AuthUser[]>("/api/admin/users");
 }
 
-export function createUser(body: { username: string; password: string; role: Role }) {
+export function createUser(body: { name: string; username: string; password: string; role: Role }) {
   return request<AuthUser>("/api/admin/users", {
     method: "POST",
     body: JSON.stringify(body),

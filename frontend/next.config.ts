@@ -15,6 +15,8 @@ const allowedDevOrigins = (
 
 const nextConfig: NextConfig = {
   allowedDevOrigins,
+  // Development-only badge; top-left keeps it off the phone tab bar and the sidebar account row.
+  devIndicators: { position: "top-left" },
   async rewrites() {
     return [
       {

@@ -59,14 +59,15 @@ class User(Base):
     __table_args__ = (CheckConstraint("role IN ('admin','user')", name="ck_user_role"),)
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    username: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    username: Mapped[str] = mapped_column(String, nullable=False, unique=True)  # the login: an email address
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False, default="user")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class QuizAttempt(Base):
-    """An immutable record of one submitted text-quiz task."""
+    """An immutable record of one submitted quiz: an admin-made task, or a quick quiz (no task)."""
 
     __tablename__ = "quiz_attempts"
 
@@ -74,8 +75,8 @@ class QuizAttempt(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    task_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="RESTRICT"), nullable=False, index=True
+    task_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="RESTRICT"), nullable=True, index=True
     )
     task_name: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[int] = mapped_column(Integer, nullable=False)

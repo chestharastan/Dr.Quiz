@@ -5,7 +5,7 @@ export default function QuizHistory({ attempts }: { attempts: QuizAttempt[] }) {
     <section className="mt-5 flex flex-col gap-3">
       <div>
         <h2 className="text-[16px] font-semibold">Attempt history</h2>
-        <p className="text-[13px] text-[var(--muted)]">Your 50 most recent submitted tasks.</p>
+        <p className="text-[13px] text-[var(--muted)]">Your 50 most recent quizzes.</p>
       </div>
 
       {attempts.length === 0 ? (
@@ -32,24 +32,24 @@ export default function QuizHistory({ attempts }: { attempts: QuizAttempt[] }) {
                 </div>
               </summary>
 
-              <ul className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] pt-4">
+              <ul className="mt-4 flex flex-col gap-3 border-t border-[var(--hairline)] pt-4">
                 {attempt.per_question_results.map((answer, index) => (
                   <li key={`${attempt.id}:${answer.question_id}`} className="text-[13px]">
                     <p className="font-medium leading-snug">
                       {index + 1}. {answer.question_text}
                     </p>
+                    {/* Texts, not letters: the choices were shown in a shuffled order */}
                     <p className="mt-1 text-[var(--muted)]">
                       Your answer:{" "}
                       <strong className={answer.is_correct ? "text-correct" : "text-incorrect"}>
-                        {answer.selected_answer}
+                        {answer.selected_text ?? answer.selected_answer}
                       </strong>
-                      {!answer.is_correct && (
-                        <>
-                          {" "}
-                          · Correct: <strong className="text-correct">{answer.correct_answer}</strong>
-                        </>
-                      )}
                     </p>
+                    {!answer.is_correct && (
+                      <p className="text-[var(--muted)]">
+                        Correct: <strong className="text-correct">{answer.correct_text ?? answer.correct_answer}</strong>
+                      </p>
+                    )}
                   </li>
                 ))}
               </ul>

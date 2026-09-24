@@ -113,7 +113,7 @@ change an account that already exists.
 
 - **Admin** — manages the question bank, creates **tasks** (a named quiz:
   a question count, optionally limited to one source file) and user accounts.
-- **User** — logs in at `/login`, picks a task, and takes it.
+- **User** — logs in at `/login` and starts a quick quiz, or a task an admin made.
 
 ## Admin workflow
 
@@ -123,13 +123,17 @@ change an account that already exists.
   button yet, toggle "Include deleted" to see hidden ones), export JSON/CSV.
 - **Tasks tab** — create a named task (question count + optional source file
   filter) that users can pick.
-- **Users tab** — create a user (username/password/role) and change roles.
+- **Users tab** — create an account (name, email, password, role) and change roles.
+  People log in with their email; upper/lower case doesn't matter.
 
 ## User workflow
 
-- `/login` → `/quiz` — pick a task, click it to start, answer one question per
-  card (auto-advances, Previous/Next to navigate), submit, see score and
-  per-question correct answers. Submitted attempts and their answers are saved
+- `/login` → `/quiz` — start a quick quiz (choose 10–100 questions and,
+  optionally, one source PDF; questions are picked at random) or an assigned
+  task. Each question's answers appear in a random order; grading still uses
+  the original letters, on the server. Answer one question per card
+  (auto-advances, Previous/Next to navigate), submit, see score and
+  per-question answers. Submitted attempts and their answers are saved
   to Postgres and shown in the attempt history. In-progress answers are saved
   to the browser so a refresh never loses them; logging out clears that local
   progress.

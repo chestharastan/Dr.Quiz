@@ -145,20 +145,20 @@ export default function AdminTaskPanel() {
           </div>
 
           {/* Tablet/desktop: table */}
-          <div className="glass-card hidden overflow-x-auto p-2 sm:block">
-            <table className="w-full border-collapse text-sm">
+          <div className="glass-card hidden overflow-x-auto sm:block">
+            <table className="data-table w-full text-[14px]">
               <thead>
-                <tr className="text-left text-[13px] text-[var(--muted)]">
-                  <th className="p-3">Name</th>
-                  <th className="p-3">Questions</th>
-                  <th className="p-3">Source file</th>
+                <tr className="text-left">
+                  <th>Name</th>
+                  <th>Questions</th>
+                  <th>Source file</th>
                 </tr>
               </thead>
               <tbody>
                 {tasks.map((t) => (
-                  <tr key={t.id} className="border-t border-[var(--hairline)]">
-                    <td className="p-3 font-medium">{t.name}</td>
-                    <td className="p-3">
+                  <tr key={t.id}>
+                    <td className="font-medium">{t.name}</td>
+                    <td>
                       <input
                         type="number"
                         min={1}
@@ -167,7 +167,7 @@ export default function AdminTaskPanel() {
                         className="input-field w-20"
                       />
                     </td>
-                    <td className="p-3">
+                    <td>
                       <select
                         value={t.source_file ?? ""}
                         onChange={(e) => handleSourceFileChange(t.id, e.target.value)}
